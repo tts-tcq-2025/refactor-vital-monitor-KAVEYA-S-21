@@ -20,3 +20,5 @@ TEST(Monitor, AllVitalsOk) {
     EXPECT_TRUE(vitalsInRange(95, 60, 90));
     EXPECT_TRUE(vitalsInRange(102, 100, 90));
 }
+
+
