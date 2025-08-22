@@ -1,50 +1,48 @@
+#include "./monitor.h"
 #include <iostream>
 #include <thread>
 #include <chrono>
-#include <string>
+#include <algorithm>
+using std::cout, std::flush, std::this_thread::sleep_for, std::chrono::seconds;
 
-using std::cout;
-using std::endl;
-using std::flush;
-using std::this_thread::sleep_for;
-using std::chrono::seconds;
+bool isTemperatureInRange(float temperature) {
+    return temperature >= 95 && temperature <= 102;
+}
 
-// ---------- Visual Effect ----------
-void printVisualEffect(const std::string& message) {
-    cout << message << endl;
+bool isPulseRateInRange(float pulseRate) {
+    return pulseRate >= 60 && pulseRate <= 100;
+}
+
+bool isSpo2InRange(float spo2) {
+    return spo2 >= 90;
+}
+
+void alert(const char* message) {
+    cout << message << "\n";
     for (int i = 0; i < 6; i++) {
         cout << "\r* " << flush;
         sleep_for(seconds(1));
         cout << "\r *" << flush;
         sleep_for(seconds(1));
     }
-    cout << endl;
 }
 
-// ---------- Vital checks ----------
-bool vitalRangeCheck(float vitalValue, float lowThreshold, float highThreshold,
-                     const std::string& message) {
-    if (vitalValue < lowThreshold || vitalValue > highThreshold) {
-        printVisualEffect(message);
+struct VitalCheck {
+    bool ok;
+    const char* message;
+};
+
+bool vitalsInRange(float temperature, float pulseRate, float spo2) {
+    const VitalCheck checks[] = {
+        {isTemperatureInRange(temperature), "Temperature is critical!"},
+        {isPulseRateInRange(pulseRate), "Pulse Rate is out of range!"},
+        {isSpo2InRange(spo2), "Oxygen Saturation out of range!"}
+    };
+    auto it = std::find_if(std::begin(checks), std::end(checks),
+                           [](const VitalCheck& check){ return !check.ok; });
+    if (it != std::end(checks)) {
+        alert(it->message);
         return false;
     }
     return true;
-}
-
-bool vitalLowThresholdCheck(float vitalValue, float lowThreshold,
-                            const std::string& message) {
-    if (vitalValue < lowThreshold) {
-        printVisualEffect(message);
-        return false;
-    }
-    return true;
-}
-
-// ---------- Coordinator ----------
-bool vitalOk(float temperature, float pulseRate, float spo2) {
-    bool tempOk  = vitalRangeCheck(temperature, 95, 102, "Temperature critical!");
-    bool pulseOk = vitalRangeCheck(pulseRate, 60, 100, "Pulse Rate is out of range!");
-    bool spo2Ok  = vitalLowThresholdCheck(spo2, 90, "Oxygen Saturation out of range!");
-
-    return tempOk && pulseOk && spo2Ok;
 }
