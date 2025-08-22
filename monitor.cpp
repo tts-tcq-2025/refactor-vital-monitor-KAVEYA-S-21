@@ -2,69 +2,49 @@
 #include <thread>
 #include <chrono>
 #include <string>
-#include <vector>
-#include <functional>
-#include <algorithm>
 
 using std::cout;
+using std::endl;
 using std::flush;
 using std::this_thread::sleep_for;
 using std::chrono::seconds;
 
-// ---------- Data structures ----------
-struct VitalStatus {
-    bool ok;
-    std::string message;
-};
-
-// ---------- Pure functions (testable) ----------
-VitalStatus checkTemperature(float temperature) {
-    if (temperature < 95 || temperature > 102) {
-        return {false, "Temperature is critical!"};
-    }
-    return {true, ""};
-}
-
-VitalStatus checkPulse(float pulseRate) {
-    if (pulseRate < 60 || pulseRate > 100) {
-        return {false, "Pulse Rate is out of range!"};
-    }
-    return {true, ""};
-}
-
-VitalStatus checkSpo2(float spo2) {
-    if (spo2 < 90) {
-        return {false, "Oxygen Saturation out of range!"};
-    }
-    return {true, ""};
-}
-
-// ---------- I/O side effects ----------
-void blinkWarning(int blinks = 6) {
-    for (int i = 0; i < blinks; i++) {
+// ---------- Visual Effect ----------
+void printVisualEffect(const std::string& message) {
+    cout << message << endl;
+    for (int i = 0; i < 6; i++) {
         cout << "\r* " << flush;
         sleep_for(seconds(1));
         cout << "\r *" << flush;
         sleep_for(seconds(1));
     }
-    cout << "\n";
+    cout << endl;
+}
+
+// ---------- Vital checks ----------
+bool vitalRangeCheck(float vitalValue, float lowThreshold, float highThreshold,
+                     const std::string& message) {
+    if (vitalValue < lowThreshold || vitalValue > highThreshold) {
+        printVisualEffect(message);
+        return false;
+    }
+    return true;
+}
+
+bool vitalLowThresholdCheck(float vitalValue, float lowThreshold,
+                            const std::string& message) {
+    if (vitalValue < lowThreshold) {
+        printVisualEffect(message);
+        return false;
+    }
+    return true;
 }
 
 // ---------- Coordinator ----------
-int vitalsOk(float temperature, float pulseRate, float spo2) {
-    std::vector<VitalStatus> results = {
-        checkTemperature(temperature),
-        checkPulse(pulseRate),
-        checkSpo2(spo2)
-    };
+bool vitalOk(float temperature, float pulseRate, float spo2) {
+    bool tempOk  = vitalRangeCheck(temperature, 95, 102, "Temperature critical!");
+    bool pulseOk = vitalRangeCheck(pulseRate, 60, 100, "Pulse Rate is out of range!");
+    bool spo2Ok  = vitalLowThresholdCheck(spo2, 90, "Oxygen Saturation out of range!");
 
-    auto it = std::find_if(results.begin(), results.end(),
-                           [](const VitalStatus& s){ return !s.ok; });
-
-    if (it != results.end()) {
-        cout << it->message << "\n";
-        blinkWarning();
-        return 0;
-    }
-    return 1;
+    return tempOk && pulseOk && spo2Ok;
 }
